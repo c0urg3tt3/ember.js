@@ -1,8 +1,10 @@
 rvm:
   - 1.9.3
+bundler_args: --without development
 before_script:
   - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
-  - bundle exec rackup &
-  - sleep 5
-script: phantomjs tests/qunit/run-qunit.js "http://localhost:9292/tests/index.html?package=all" && phantomjs tests/qunit/run-qunit.js "http://localhost:9292/tests/index.html?package=all&jquery=1.6.4" && phantomjs tests/qunit/run-qunit.js "http://localhost:9292/tests/index.html?package=all&extendprototypes=true" && phantomjs tests/qunit/run-qunit.js "http://localhost:9292/tests/index.html?package=all&extendprototypes=true&jquery=1.6.4"
+  - "rake clean"
+script: "rake test[all]"
+notifications:
+  webhooks: http://emberjs-master-builds.herokuapp.com/upload/ember.js

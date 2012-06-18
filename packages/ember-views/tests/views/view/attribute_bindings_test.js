@@ -7,14 +7,14 @@
 /*global Test:true*/
 var set = Ember.set, get = Ember.get;
 
-require('ember-views/views/view');
-
 var view;
 
 module("Ember.View - Attribute Bindings", {
   teardown: function() {
     if (view) {
-      view.destroy();
+      Ember.run(function(){
+        view.destroy();
+      });
       view = null;
     }
   }
@@ -35,9 +35,11 @@ test("should render attribute bindings", function() {
     notNumber: NaN
   });
 
-  view.createElement();
+  Ember.run(function(){
+    view.createElement();
+  });
 
-  equals(view.$().attr('type'), 'submit', "updates type attribute");
+  equal(view.$().attr('type'), 'submit', "updates type attribute");
   ok(view.$().attr('disabled'), "supports customizing attribute name for Boolean values");
   ok(!view.$().attr('exploded'), "removes exploded attribute when false");
   ok(!view.$().attr('destroyed'), "removes destroyed attribute when false");
@@ -63,9 +65,11 @@ test("should update attribute bindings", function() {
     explosions: 15
   });
 
-  view.createElement();
+  Ember.run(function(){
+    view.createElement();
+  });
 
-  equals(view.$().attr('type'), 'reset', "adds type attribute");
+  equal(view.$().attr('type'), 'reset', "adds type attribute");
   ok(view.$().attr('disabled'), "adds disabled attribute when true");
   ok(view.$().attr('exploded'), "adds exploded attribute when true");
   ok(view.$().attr('destroyed'), "adds destroyed attribute when true");
@@ -75,16 +79,18 @@ test("should update attribute bindings", function() {
   ok(view.$().attr('notNumber'), "adds notNumber attribute when true");
   equal(view.$().attr('explosions'), "15", "adds integer attributes");
 
-  view.set('type', 'submit');
-  view.set('isDisabled', false);
-  view.set('exploded', false);
-  view.set('destroyed', false);
-  view.set('exists', true);
-  view.set('nothing', null);
-  view.set('notDefined', undefined);
-  view.set('notNumber', NaN);
+  Ember.run(function(){
+    view.set('type', 'submit');
+    view.set('isDisabled', false);
+    view.set('exploded', false);
+    view.set('destroyed', false);
+    view.set('exists', true);
+    view.set('nothing', null);
+    view.set('notDefined', undefined);
+    view.set('notNumber', NaN);
+  });
 
-  equals(view.$().attr('type'), 'submit', "updates type attribute");
+  equal(view.$().attr('type'), 'submit', "updates type attribute");
   ok(!view.$().attr('disabled'), "removes disabled attribute when false");
   ok(!view.$().attr('exploded'), "removes exploded attribute when false");
   ok(!view.$().attr('destroyed'), "removes destroyed attribute when false");
@@ -128,14 +134,23 @@ test("should allow attributes to be set in the inBuffer state", function() {
     }));
   });
 
-  Ember.run(function() {
-    parentView.append();
-  });
+  try {
+    Ember.TESTING_DEPRECATION = true;
+
+    Ember.run(function() {
+      parentView.append();
+    });
+  } finally {
+    Ember.TESTING_DEPRECATION = false;
+  }
 
   equal(parentView.get('childViews')[0].$().attr('foo'), 'baz');
 
-  parentView.destroy();
-  Test.destroy();
+  Ember.run(function(){
+    parentView.destroy();
+    Test.destroy();
+  });
+  
 });
 
 // This comes into play when using the {{#each}} helper. If the
@@ -144,10 +159,14 @@ test("should allow attributes to be set in the inBuffer state", function() {
 test("should allow binding to String objects", function() {
   view = Ember.View.create({
     attributeBindings: ['foo'],
-    foo: new String("bar")
+    // JSHint doesn't like `new String` so we'll create it the same way it gets created in practice
+    foo: (function(){ return this; }).call("bar")
   });
 
-  view.createElement();
+  Ember.run(function(){
+    view.createElement();
+  });
+  
 
   equal(view.$().attr('foo'), 'bar', "should convert String object to bare string");
 });

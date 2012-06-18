@@ -1,5 +1,5 @@
 // ==========================================================================
-// Project:   Ember Handlebar Views
+// Project:   Ember Handlebars Views
 // Copyright: ©2011 Strobe Inc. and contributors.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
@@ -17,6 +17,20 @@ Ember.Button = Ember.View.extend(Ember.TargetActionSupport, {
   propagateEvents: false,
 
   attributeBindings: ['type', 'disabled', 'href'],
+
+  /** @private
+    Overrides TargetActionSupport's targetObject computed
+    property to use Handlebars-specific path resolution.
+  */
+  targetObject: Ember.computed(function() {
+    var target = get(this, 'target'),
+        root = get(this, 'context'),
+        data = get(this, 'templateData');
+
+    if (typeof target !== 'string') { return target; }
+
+    return Ember.Handlebars.getPath(root, target, { data: data });
+  }).property('target').cacheable(),
 
   // Defaults to 'button' if tagName is 'input' or 'button'
   type: Ember.computed(function(key, value) {
@@ -93,5 +107,10 @@ Ember.Button = Ember.View.extend(Ember.TargetActionSupport, {
 
   touchEnd: function(touch) {
     return this.mouseUp(touch);
+  },
+
+  init: function() {
+    Ember.deprecate("Ember.Button is deprecated and will be removed from future releases. Consider using the `{{action}}` helper.");
+    this._super();
   }
 });

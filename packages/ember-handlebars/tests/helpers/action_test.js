@@ -1,4 +1,4 @@
-var application, view,
+var dispatcher, view,
     ActionHelper = Ember.Handlebars.ActionHelper,
     originalRegisterAction = ActionHelper.registerAction;
 
@@ -8,12 +8,13 @@ var appendView = function() {
 
 module("Ember.Handlebars - action helper", {
   setup: function() {
-    application = Ember.Application.create();
+    dispatcher = Ember.EventDispatcher.create();
+    dispatcher.setup();
   },
 
   teardown: function() {
     Ember.run(function() {
-      application.destroy();
+      dispatcher.destroy();
       view.destroy();
     });
   }
@@ -81,6 +82,29 @@ test("should by default target the parent view", function() {
   equal(registeredTarget, view, "The parent view was registered as the target");
 
   ActionHelper.registerAction = originalRegisterAction;
+});
+
+test("should by default target the state manager on the controller if it exists", function() {
+  var registeredTarget;
+
+  var sent = 0;
+
+  view = Ember.View.create({
+    controller: Ember.Object.create({
+      target: Ember.Object.create({
+        isState: true,
+        send: function(context) {
+          sent++;
+        }
+      })
+    }),
+    template: Ember.Handlebars.compile('<a id="ember-link" href="#" {{action "edit"}}>edit</a>')
+  });
+
+  appendView();
+
+  Ember.$("#ember-link").click();
+  equal(sent, 1, "The action was sent to the state manager");
 });
 
 test("should allow a target to be specified", function() {
@@ -195,19 +219,19 @@ test("should unregister event handlers on rerender", function() {
     template: Ember.Handlebars.compile('<a href="#" {{action "edit"}}>click me</a>'),
     edit: function() { eventHandlerWasCalled = true; }
   });
-
+  
   appendView();
-
+  
   var previousActionId = view.$('a[data-ember-action]').attr('data-ember-action');
-
-  view.rerender();
-
+  
+  Ember.run(function(){
+    view.rerender();
+  });
+  
   ok(!Ember.Handlebars.ActionHelper.registeredActions[previousActionId], "On rerender, the event handler was removed");
-
-  Ember.run.end();
-
+  
   var newActionId = view.$('a[data-ember-action]').attr('data-ember-action');
-
+  
   ok(Ember.Handlebars.ActionHelper.registeredActions[newActionId], "After rerender completes, a new event handler was added");
 });
 
@@ -226,7 +250,7 @@ test("should properly capture events on child elements of a container with an ac
   ok(eventHandlerWasCalled, "Event on a child element triggered the action of it's parent");
 });
 
-test("should allow bubbling of events from action helper to original parent event", function() {
+test("should default to not bubbling of events from action helper to original parent event", function() {
   var eventHandlerWasCalled = false,
       originalEventHandlerWasCalled = false;
 
@@ -240,30 +264,48 @@ test("should allow bubbling of events from action helper to original parent even
 
   view.$('a').trigger('click');
 
-  ok(eventHandlerWasCalled && originalEventHandlerWasCalled, "Both event handlers were called");
+  ok(eventHandlerWasCalled, "The child handler was called");
+  ok(!originalEventHandlerWasCalled, "The parent handler was not called");
 });
 
 test("should be compatible with sending events to a state manager", function() {
-  var sendWasCalled = false,
-      eventNameSent,
+  var eventNameCalled,
       eventObjectSent,
-      fakeManager = {
-        send: function(eventName, actionEvent) { sendWasCalled = true; eventNameSent = eventName; eventObjectSent = actionEvent; }
+      manager = {
+        isState: true,
+        send: function(eventName, eventObject) { eventNameCalled = eventName; eventObjectSent = eventObject; }
       };
 
   view = Ember.View.create({
-    template: Ember.Handlebars.compile('<a href="#" {{action "edit" target="fakeManager"}}>click me</a>'),
-    fakeManager: fakeManager
+    template: Ember.Handlebars.compile('<a href="#" {{action "edit" target="manager"}}>click me</a>'),
+    manager: manager
   });
 
   appendView();
 
   view.$('a').trigger('click');
 
-  ok(sendWasCalled, "The state manager's send method was called");
-  equal(eventNameSent, "edit", "The edit event was sent to the state manager");
+  equal(eventNameCalled, "edit", "The state manager's send method was called");
   ok(eventObjectSent, "The state manager's send method was called with an event object");
 });
+
+test("should allow 'send' as action name (#594)", function() {
+  var eventHandlerWasCalled = false;
+  var eventObjectSent;
+
+  view = Ember.View.create({
+    template: Ember.Handlebars.compile('<a href="#" {{action "send" }}>send</a>'),
+    send: function(evt){ eventHandlerWasCalled = true; eventObjectSent = evt; }
+  });
+
+  appendView();
+
+  view.$('a').trigger('click');
+
+  ok(eventHandlerWasCalled, "The view's send method was called");
+  ok(eventObjectSent, "Callback was called with an event object");
+});
+
 
 test("should send the view, event and current Handlebars context to the action", function() {
   var passedTarget;
@@ -308,4 +350,23 @@ test("should only trigger actions for the event they were registered on", functi
   view.$('a').trigger('mouseover');
 
   ok(!editWasCalled, "The action wasn't called");
+});
+
+test("should allow a context to be specified", function() {
+  var passedContext,
+      model = Ember.Object.create();
+
+  view = Ember.View.create({
+    people: Ember.A([model]),
+    template: Ember.Handlebars.compile('{{#each person in people}}<button {{action "edit" context="person"}}>edit</button>{{/each}}'),
+    edit: function(event) {
+      passedContext = event.context;
+    }
+  });
+
+  appendView();
+
+  view.$('button').trigger('click');
+
+  equal(passedContext, model, "the action was called with the passed context");
 });

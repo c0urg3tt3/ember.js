@@ -1,7 +1,12 @@
-/*jshint newcap:true*/
+/*jshint newcap:false*/
 
-// Testing this is not ideal, but we want ArrayUtils to use native functions
+// NOTE: There is a bug in jshint that doesn't recognize `Object()` without `new`
+// as being ok unless both `newcap:false` and not `use strict`.
+// https://github.com/jshint/jshint/issues/392
+
+// Testing this is not ideal, but we want to use native functions
 // if available, but not to use versions created by libraries like Prototype
+/** @private */
 var isNativeFunc = function(func) {
   // This should probably work in all browsers likely to have ES5 array methods
   return func && Function.prototype.toString.call(func).indexOf('[native code]') > -1;
@@ -10,7 +15,7 @@ var isNativeFunc = function(func) {
 // From: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/map
 /** @private */
 var arrayMap = isNativeFunc(Array.prototype.map) ? Array.prototype.map : function(fun /*, thisp */) {
-  "use strict";
+  //"use strict";
 
   if (this === void 0 || this === null) {
     throw new TypeError();
@@ -36,7 +41,7 @@ var arrayMap = isNativeFunc(Array.prototype.map) ? Array.prototype.map : functio
 // From: https://developer.mozilla.org/en/JavaScript/Reference/Global_Objects/array/foreach
 /** @private */
 var arrayForEach = isNativeFunc(Array.prototype.forEach) ? Array.prototype.forEach : function(fun /*, thisp */) {
-  "use strict";
+  //"use strict";
 
   if (this === void 0 || this === null) {
     throw new TypeError();
@@ -66,23 +71,36 @@ var arrayIndexOf = isNativeFunc(Array.prototype.indexOf) ? Array.prototype.index
   return -1;
 };
 
+Ember.ArrayPolyfills = {
+  map: arrayMap,
+  forEach: arrayForEach,
+  indexOf: arrayIndexOf
+};
 
-Ember.ArrayUtils = {
-  map: function(obj) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    return obj.map ? obj.map.apply(obj, args) : arrayMap.apply(obj, args);
+Ember.EnumerableUtils = {
+  map: function(obj, callback, thisArg) {
+    return obj.map ? obj.map.call(obj, callback, thisArg) : arrayMap.call(obj, callback, thisArg);
   },
 
-  forEach: function(obj) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    return obj.forEach ? obj.forEach.apply(obj, args) : arrayForEach.apply(obj, args);
+  forEach: function(obj, callback, thisArg) {
+    return obj.forEach ? obj.forEach.call(obj, callback, thisArg) : arrayForEach.call(obj, callback, thisArg);
   },
 
-  indexOf: function(obj) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    return obj.indexOf ? obj.indexOf.apply(obj, args) : arrayIndexOf.apply(obj, args);
+  indexOf: function(obj, element, index) {
+    return obj.indexOf ? obj.indexOf.call(obj, element, index) : arrayIndexOf.call(obj, element, index);
+  },
+
+  indexesOf: function(obj, elements) {
+    return elements === undefined ? [] : Ember.EnumerableUtils.map(elements, function(item) {
+      return Ember.EnumerableUtils.indexOf(obj, item);
+    });
+  },
+
+  removeObject: function(array, item) {
+    var index = this.indexOf(array, item);
+    if (index !== -1) { array.splice(index, 1); }
   }
-}
+};
 
 
 if (Ember.SHIM_ES5) {

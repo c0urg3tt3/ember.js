@@ -54,6 +54,7 @@ Ember.EventDispatcher = Ember.Object.extend(
       keypress    : 'keyPress',
       mousedown   : 'mouseDown',
       mouseup     : 'mouseUp',
+      contextmenu : 'contextMenu',
       click       : 'click',
       dblclick    : 'doubleClick',
       mousemove   : 'mouseMove',
@@ -62,6 +63,7 @@ Ember.EventDispatcher = Ember.Object.extend(
       mouseenter  : 'mouseEnter',
       mouseleave  : 'mouseLeave',
       submit      : 'submit',
+      input       : 'input',
       change      : 'change',
       dragstart   : 'dragStart',
       drag        : 'drag',
@@ -76,13 +78,13 @@ Ember.EventDispatcher = Ember.Object.extend(
 
     var rootElement = Ember.$(get(this, 'rootElement'));
 
-    ember_assert(fmt('You cannot use the same root element (%@) multiple times in an Ember.Application', [rootElement.selector || rootElement[0].tagName]), !rootElement.is('.ember-application'));
-    ember_assert('You cannot make a new Ember.Application using a root element that is a descendent of an existing Ember.Application', !rootElement.closest('.ember-application').length);
-    ember_assert('You cannot make a new Ember.Application using a root element that is an ancestor of an existing Ember.Application', !rootElement.find('.ember-application').length);
+    Ember.assert(fmt('You cannot use the same root element (%@) multiple times in an Ember.Application', [rootElement.selector || rootElement[0].tagName]), !rootElement.is('.ember-application'));
+    Ember.assert('You cannot make a new Ember.Application using a root element that is a descendent of an existing Ember.Application', !rootElement.closest('.ember-application').length);
+    Ember.assert('You cannot make a new Ember.Application using a root element that is an ancestor of an existing Ember.Application', !rootElement.find('.ember-application').length);
 
     rootElement.addClass('ember-application');
 
-    ember_assert('Unable to add "ember-application" class to rootElement. Make sure you set rootElement to the body or an element in the body.', rootElement.is('.ember-application'));
+    Ember.assert('Unable to add "ember-application" class to rootElement. Make sure you set rootElement to the body or an element in the body.', rootElement.is('.ember-application'));
 
     for (event in events) {
       if (events.hasOwnProperty(event)) {
@@ -132,11 +134,13 @@ Ember.EventDispatcher = Ember.Object.extend(
     });
 
     rootElement.delegate('[data-ember-action]', event + '.ember', function(evt) {
-      var actionId = $(evt.currentTarget).attr('data-ember-action'),
+      var actionId = Ember.$(evt.currentTarget).attr('data-ember-action'),
           action   = Ember.Handlebars.ActionHelper.registeredActions[actionId],
           handler  = action.handler;
 
       if (action.eventName === eventName) {
+        evt.preventDefault();
+        evt.stopPropagation();
         return handler(evt);
       }
     });
@@ -163,6 +167,7 @@ Ember.EventDispatcher = Ember.Object.extend(
     var handler = object[eventName];
     if (Ember.typeOf(handler) === 'function') {
       result = handler.call(object, evt, view);
+      // Do not preventDefault in eventManagers.
       evt.stopPropagation();
     }
     else {

@@ -15,7 +15,7 @@ testBoth("bindings should not sync twice in a single run loop", function(get, se
         getCalled++;
         return setValue;
       }
-    }));
+    }).volatile());
 
     b = {
       a: a
@@ -43,6 +43,9 @@ testBoth("bindings should not infinite loop if computed properties return object
 
     Ember.defineProperty(a, 'foo', Ember.computed(function() {
       getCalled++;
+      if (getCalled > 1000) {
+        throw 'infinite loop detected';
+      }
       return ['foo', 'bar'];
     }));
 
@@ -86,6 +89,49 @@ testBoth("bindings should do the right thing when observers trigger bindings in 
   equal(get(a, 'foo'), "what is going on");
 });
 
+testBoth("bindings should do the right thing when binding is in prototype", function(get, set) {
+  var obj, proto, a, b, selectionChanged;
+  Ember.run(function() {
+    obj = {
+      selection: null
+    };
+
+    selectionChanged = 0;
+
+    Ember.addObserver(obj, 'selection', function () {
+      selectionChanged++;
+    });
+
+    proto = {
+      obj: obj,
+      changeSelection: function (value) {
+        set(this, 'selection', value);
+      }
+    };
+    Ember.bind(proto, 'selection', 'obj.selection');
+
+    a = Ember.create(proto);
+    b = Ember.create(proto);
+    Ember.rewatch(a);
+    Ember.rewatch(b);
+  });
+
+  Ember.run(function () {
+    set(a, 'selection', 'a');
+  });
+
+  Ember.run(function () {
+    set(b, 'selection', 'b');
+  });
+
+  Ember.run(function () {
+    set(a, 'selection', 'a');
+  });
+
+  equal(selectionChanged, 3);
+  equal(get(obj, 'selection'), 'a');
+});
+
 testBoth("bindings should not try to sync destroyed objects", function(get, set) {
   var a, b;
 
@@ -103,7 +149,7 @@ testBoth("bindings should not try to sync destroyed objects", function(get, set)
   Ember.run(function() {
     set(a, 'foo', 'trollface');
     set(b, 'isDestroyed', true);
-    // should not raise
+    ok(true, "should not raise");
   });
 
   Ember.run(function() {
@@ -120,6 +166,6 @@ testBoth("bindings should not try to sync destroyed objects", function(get, set)
   Ember.run(function() {
     set(b, 'foo', 'trollface');
     set(a, 'isDestroyed', true);
-    // should not raise
+    ok(true, "should not raise");
   });
 });

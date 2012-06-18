@@ -6,8 +6,26 @@
 // ==========================================================================
 
 var get = Ember.get, set = Ember.set;
-var forEach = Ember.ArrayUtils.forEach;
-var indexOf = Ember.ArrayUtils.indexOf;
+var indexOf = Ember.ArrayPolyfills.indexOf;
+
+/** @private */
+var ClassSet = function() {
+  this.seen = {};
+  this.list = [];
+};
+
+ClassSet.prototype = {
+  add: function(string) {
+    if (string in this.seen) { return; }
+    this.seen[string] = true;
+
+    this.list.push(string);
+  },
+
+  toDOM: function() {
+    return this.list.join(" ");
+  }
+};
 
 /**
   @class
@@ -25,7 +43,7 @@ Ember.RenderBuffer = function(tagName) {
 Ember._RenderBuffer = function(tagName) {
   this.elementTag = tagName;
   this.childBuffers = [];
-}
+};
 
 Ember._RenderBuffer.prototype =
 /** @scope Ember.RenderBuffer.prototype */ {
@@ -120,9 +138,9 @@ Ember._RenderBuffer.prototype =
   */
   addClass: function(className) {
     // lazily create elementClasses
-    var elementClasses = this.elementClasses = (this.elementClasses || Ember.A([]))
+    var elementClasses = this.elementClasses = (this.elementClasses || new ClassSet());
+    this.elementClasses.add(className);
 
-    this.elementClasses.addObject(className);
     return this;
   },
 
@@ -206,7 +224,7 @@ Ember._RenderBuffer.prototype =
     var buffer = new Ember._RenderBuffer(tagName);
     buffer.parentBuffer = parent;
 
-    if (other) { buffer.setProperties(other); }
+    if (other) { Ember.$.extend(buffer, other); }
     if (fn) { fn.call(this, buffer); }
 
     return buffer;
@@ -227,7 +245,7 @@ Ember._RenderBuffer.prototype =
 
     var childBuffers = parent.childBuffers;
 
-    var index = indexOf(childBuffers, this);
+    var index = indexOf.call(childBuffers, this);
 
     if (newBuffer) {
       childBuffers.splice(index, 1, newBuffer);
@@ -284,7 +302,7 @@ Ember._RenderBuffer.prototype =
 
     return this.newBuffer(tagName, parentBuffer, function(buffer) {
       var siblings = parentBuffer.childBuffers;
-      var index = indexOf(siblings, this);
+      var index = indexOf.call(siblings, this);
       siblings.splice(index + 1, 0, buffer);
     });
   },
@@ -328,13 +346,13 @@ Ember._RenderBuffer.prototype =
 
       openTag = ["<" + tag];
 
-      if (id) { openTag.push('id="' + id + '"'); }
-      if (classes) { openTag.push('class="' + classes.join(" ") + '"'); }
+      if (id) { openTag.push('id="' + this._escapeAttribute(id) + '"'); }
+      if (classes) { openTag.push('class="' + this._escapeAttribute(classes.toDOM()) + '"'); }
 
       if (style) {
         for (prop in style) {
           if (style.hasOwnProperty(prop)) {
-            styleBuffer += (prop + ':' + style[prop] + ';');
+            styleBuffer += (prop + ':' + this._escapeAttribute(style[prop]) + ';');
           }
         }
 
@@ -344,7 +362,7 @@ Ember._RenderBuffer.prototype =
       if (attrs) {
         for (prop in attrs) {
           if (attrs.hasOwnProperty(prop)) {
-            openTag.push(prop + '="' + attrs[prop] + '"');
+            openTag.push(prop + '="' + this._escapeAttribute(attrs[prop]) + '"');
           }
         }
       }
@@ -354,7 +372,7 @@ Ember._RenderBuffer.prototype =
 
     var childBuffers = this.childBuffers;
 
-    forEach(childBuffers, function(buffer) {
+    Ember.ArrayPolyfills.forEach.call(childBuffers, function(buffer) {
       var stringy = typeof buffer === 'string';
       content += (stringy ? buffer : buffer.string());
     });
@@ -364,6 +382,30 @@ Ember._RenderBuffer.prototype =
     } else {
       return content;
     }
+  },
+
+  _escapeAttribute: function(value) {
+    // Stolen shamelessly from Handlebars
+
+    var escape = {
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#x27;",
+      "`": "&#x60;"
+    };
+
+    var badChars = /&(?!\w+;)|[<>"'`]/g;
+    var possible = /[&<>"'`]/;
+
+    var escapeChar = function(chr) {
+      return escape[chr] || "&amp;";
+    };
+
+    var string = value.toString();
+
+    if(!possible.test(string)) { return string; }
+    return string.replace(badChars, escapeChar);
   }
 
 };

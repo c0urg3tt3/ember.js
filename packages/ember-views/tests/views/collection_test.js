@@ -6,7 +6,7 @@
 // ==========================================================================
 
 var set = Ember.set, get = Ember.get;
-var forEach = Ember.ArrayUtils.forEach;
+var forEach = Ember.EnumerableUtils.forEach;
 var view;
 
 module("Ember.CollectionView", {
@@ -15,7 +15,9 @@ module("Ember.CollectionView", {
   },
   teardown: function() {
     delete Ember.CollectionView.CONTAINER_MAP.del;
-    if (view) { view.destroy(); }
+    Ember.run(function(){
+      if (view) { view.destroy(); }
+    });
   }
 });
 
@@ -177,15 +179,87 @@ test("should allow changes to content object before layer is created", function(
     content: null
   });
 
-  set(view, 'content', Ember.A());
-  set(view, 'content', Ember.A([1, 2, 3]));
-  set(view, 'content', Ember.A([1, 2]));
 
   Ember.run(function() {
+    set(view, 'content', Ember.A());
+    set(view, 'content', Ember.A([1, 2, 3]));
+    set(view, 'content', Ember.A([1, 2]));
     view.append();
   });
 
   ok(view.$().children().length);
+});
+
+test("should fire life cycle events when elements are added and removed", function() {
+  var view,
+    didInsertElement = 0,
+    willDestroyElement = 0,
+    willDestroy = 0,
+    content = Ember.A([1, 2, 3]);
+  Ember.run(function () {
+    view = Ember.CollectionView.create({
+      content: content,
+      itemViewClass: Ember.View.extend({
+        render: function(buf) {
+          buf.push(get(this, 'content'));
+        },
+        didInsertElement: function () {
+          didInsertElement++;
+        },
+        willDestroyElement: function () {
+          willDestroyElement++;
+        },
+        willDestroy: function () {
+          willDestroy++;
+          this._super();
+        }
+      })
+    });
+    view.appendTo('#qunit-fixture');
+  });
+
+  equal(didInsertElement, 3);
+  equal(willDestroyElement, 0);
+  equal(willDestroy, 0);
+  equal(view.$().text(), '123');
+
+  Ember.run(function () {
+    content.pushObject(4);
+    content.unshiftObject(0);
+  });
+
+
+  equal(didInsertElement, 5);
+  equal(willDestroyElement, 0);
+  equal(willDestroy, 0);
+  equal(view.$().text(), '01234');
+
+  Ember.run(function () {
+    content.popObject();
+    content.shiftObject();
+  });
+
+  equal(didInsertElement, 5);
+  equal(willDestroyElement, 2);
+  equal(willDestroy, 2);
+  equal(view.$().text(), '123');
+
+  Ember.run(function () {
+    view.set('content', Ember.A([7,8,9]));
+  });
+
+  equal(didInsertElement, 8);
+  equal(willDestroyElement, 5);
+  equal(willDestroy, 5);
+  equal(view.$().text(), '789');
+
+  Ember.run(function () {
+    view.destroy();
+  });
+
+  equal(didInsertElement, 8);
+  equal(willDestroyElement, 8);
+  equal(willDestroy, 8);
 });
 
 test("should allow changing content property to be null", function() {
@@ -240,4 +314,31 @@ test("should allow declaration of itemViewClass as a string", function() {
   });
 
   equal(view.$('.ember-view').length, 3);
+});
+
+test("should not render the emptyView if content is emptied and refilled in the same run loop", function() {
+  view = Ember.CollectionView.create({
+    tagName: 'div',
+    content: Ember.A(['NEWS GUVNAH']),
+
+    emptyView: Ember.View.create({
+      tagName: 'kbd',
+      render: function(buf) {
+        buf.push("OY SORRY GUVNAH NO NEWS TODAY EH");
+      }
+    })
+  });
+
+  Ember.run(function() {
+    view.append();
+  });
+  
+  equal(view.$().find('kbd:contains("OY SORRY GUVNAH")').length, 0);
+
+  Ember.run(function() {
+    view.get('content').popObject();
+    view.get('content').pushObject(['NEWS GUVNAH']);
+  });
+  equal(view.$('div').length, 1);
+  equal(view.$().find('kbd:contains("OY SORRY GUVNAH")').length, 0);
 });

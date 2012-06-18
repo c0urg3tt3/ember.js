@@ -14,7 +14,7 @@ function mapFunc(item) { return item ? item.toString() : null; }
 
 suite.test('map should iterate over list', function() {
   var obj = this.newObject(),
-      ary = Ember.ArrayUtils.map(this.toArray(obj), mapFunc),
+      ary = Ember.EnumerableUtils.map(this.toArray(obj), mapFunc),
       found = [];
 
   found = obj.map(mapFunc);
@@ -23,7 +23,10 @@ suite.test('map should iterate over list', function() {
 
 
 suite.test('map should iterate over list after mutation', function() {
-  if (Ember.get(this, 'canTestMutation')) return ;
+  if (Ember.get(this, 'canTestMutation')) {
+    expect(0);
+    return ;
+  }
 
   var obj = this.newObject(),
       ary = this.toArray(obj).map(mapFunc),

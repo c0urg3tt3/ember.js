@@ -8,7 +8,11 @@ module("views/view/view_lifecycle_test - pre-render", {
   },
 
   teardown: function() {
-    if (view) { view.destroy(); }
+    if (view) { 
+      Ember.run(function(){
+        view.destroy();
+      });
+    }
   }
 });
 
@@ -85,7 +89,11 @@ module("views/view/view_lifecycle_test - in render", {
   },
 
   teardown: function() {
-    if (view) { view.destroy(); }
+    if (view) { 
+      Ember.run(function(){
+        view.destroy();
+      }); 
+    }
   }
 });
 
@@ -113,38 +121,47 @@ test("appendChild should work inside a template", function() {
 });
 
 test("rerender should work inside a template", function() {
-  Ember.run(function() {
-    var renderCount = 0;
-    view = Ember.View.create({
-      template: function(context, options) {
-        var view = options.data.view;
+  try {
+    Ember.TESTING_DEPRECATION = true;
 
-        var child1 = view.appendChild(Ember.View, {
-          template: function(context, options) {
-            renderCount++;
-            options.data.buffer.push(String(renderCount));
-          }
-        });
+    Ember.run(function() {
+      var renderCount = 0;
+      view = Ember.View.create({
+        template: function(context, options) {
+          var view = options.data.view;
 
-        var child2 = view.appendChild(Ember.View, {
-          template: function(context, options) {
-            options.data.buffer.push("Inside child2");
-            child1.rerender();
-          }
-        });
-      }
+          var child1 = view.appendChild(Ember.View, {
+            template: function(context, options) {
+              renderCount++;
+              options.data.buffer.push(String(renderCount));
+            }
+          });
+
+          var child2 = view.appendChild(Ember.View, {
+            template: function(context, options) {
+              options.data.buffer.push("Inside child2");
+              child1.rerender();
+            }
+          });
+        }
+      });
+
+      view.appendTo("#qunit-fixture");
     });
-
-    view.appendTo("#qunit-fixture");
-  });
-
+  } finally {
+    Ember.TESTING_DEPRECATION = false;
+  }
   ok(view.$('div:contains(2), div:contains(Inside child2').length === 2,
      "Rerendering a view causes it to rerender");
 });
 
 module("views/view/view_lifecycle_test - in DOM", {
   teardown: function() {
-    if (view) { view.destroy(); }
+    if (view) { 
+      Ember.run(function(){
+        view.destroy();
+      });
+    }
   }
 });
 
@@ -181,12 +198,12 @@ test("should replace DOM representation if rerender() is called after element is
   });
 
   equal(view.$().text(), "Do not taunt happy fun sphere", "precond - creates DOM element");
-
+  
   view.set('shape', 'ball');
   Ember.run(function() {
     view.rerender();
   });
-
+  
   equal(view.$().text(), "Do not taunt happy fun ball", "rerenders DOM element when rerender() is called");
 });
 

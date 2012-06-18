@@ -4,6 +4,8 @@
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
+/*global jQuery*/
+
 module("Ember.meta");
 
 test("should return the same hash for an object", function() {
@@ -33,7 +35,7 @@ test("should create nested objects if writable is true", function() {
   ok(Ember.meta(obj).foo.bar.baz['bat'] = true, "can set a property on the newly created hash");
 });
 
-test("getMeta and setMeta", function() {
+test("getMeta and setMeta", function() {
   var obj = {};
 
   ok(!Ember.getMeta(obj, 'foo'), "precond - foo property on meta does not yet exist");
@@ -58,6 +60,6 @@ if (window.jQuery) {
 
     jQuery.extend(true, result, { arr: array });
 
-    equals(result.arr.length, 3);
+    equal(result.arr.length, 3);
   });
 }

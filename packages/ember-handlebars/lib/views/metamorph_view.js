@@ -9,6 +9,8 @@ var DOMManager = {
   remove: function(view) {
     var morph = view.morph;
     if (morph.isRemoved()) { return; }
+    set(view, 'element', null);
+    view._lastInsert = null;
     morph.remove();
   },
 
@@ -24,7 +26,7 @@ var DOMManager = {
     nextView._insertElementLater(function() {
       var morph = view.morph;
       morph.after(nextView.outerHTML);
-      nextView,outerHTML = null;
+      nextView.outerHTML = null;
     });
   },
 
@@ -43,13 +45,17 @@ var DOMManager = {
       view.transitionTo('inDOM');
       view._notifyDidInsertElement();
     });
+  },
+
+  empty: function(view) {
+    view.morph.html("");
   }
 };
 
 // The `morph` and `outerHTML` properties are internal only
 // and not observable.
 
-Ember.Metamorph = Ember.Mixin.create({
+Ember._Metamorph = Ember.Mixin.create({
   isVirtual: true,
   tagName: '',
 
@@ -74,4 +80,6 @@ Ember.Metamorph = Ember.Mixin.create({
 
   domManager: DOMManager
 });
+
+Ember._MetamorphView = Ember.View.extend(Ember._Metamorph);
 

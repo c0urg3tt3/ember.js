@@ -4,9 +4,6 @@
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
 
-require('ember-runtime/system/object');
-
-
 /**
   @class
   A Suite can be used to define a reusable set of unit tests that can be
@@ -45,7 +42,7 @@ Ember.Suite = Ember.Object.extend(
   /**
     Define a name for these tests - all modules are prefixed w/ it.
 
-    @property {String}
+    @type String
   */
   name: Ember.required(String),
 

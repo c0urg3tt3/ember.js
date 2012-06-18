@@ -3,7 +3,6 @@
 // Copyright: ©2011 Strobe Inc. and contributors.
 // License:   Licensed under MIT license (see license.js)
 // ==========================================================================
-/*globals testBoth */
 
 require('ember-runtime/~tests/props_helper');
 
@@ -144,7 +143,7 @@ test("can retrieve metadata for a computed property", function() {
 
   var ClassWithNoMetadata = Ember.Object.extend({
     computedProperty: Ember.computed(function() {
-    }).property(),
+    }).property().volatile(),
 
     staticProperty: 12
   });

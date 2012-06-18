@@ -7,26 +7,13 @@
 require('ember-metal/core');
 require('ember-metal/platform');
 
-// ..........................................................
-// GUIDS
-//
-
-// Used for guid generation...
-var GUID_KEY = '__ember'+ (+ new Date());
-var uuid, numberCache, stringCache;
-
-uuid         = 0;
-numberCache  = [];
-stringCache  = {};
-
-var GUID_DESC = Ember.GUID_DESC = {
-  configurable: true,
-  writable: true,
-  enumerable: false
-};
-
-var o_defineProperty = Ember.platform.defineProperty;
-var o_create = Ember.platform.create;
+var o_defineProperty = Ember.platform.defineProperty,
+    o_create = Ember.create,
+    // Used for guid generation...
+    GUID_KEY = '__ember'+ (+ new Date()),
+    uuid         = 0,
+    numberCache  = [],
+    stringCache  = {};
 
 /**
   @private
@@ -67,9 +54,11 @@ Ember.generateGuid = function(obj, prefix) {
   if (!prefix) prefix = 'ember';
   var ret = (prefix + (uuid++));
   if (obj) {
-    GUID_DESC.value = ret;
-    o_defineProperty(obj, GUID_KEY, GUID_DESC);
-    GUID_DESC.value = null;
+    o_defineProperty(obj, GUID_KEY, {
+      configurable: true,
+      writable: true,
+      value: ret
+    });
   }
 
   return ret ;
@@ -138,7 +127,7 @@ var META_KEY = Ember.GUID_KEY+'_meta';
   The key used to store meta information on object for property observing.
 
   @static
-  @property
+  @type String
 */
 Ember.META_KEY = META_KEY;
 
@@ -150,7 +139,7 @@ var EMPTY_META = {
 
 if (Object.freeze) Object.freeze(EMPTY_META);
 
-var createMeta = Ember.platform.defineProperty.isSimulated ? o_create : function(meta) { return meta; };
+var createMeta = Ember.platform.defineProperty.isSimulated ? o_create : (function(meta) { return meta; });
 
 /**
   @private
@@ -302,8 +291,6 @@ Ember.wrap = function(func, superFunc) {
 };
 
 /**
-  @function
-
   Returns true if the passed object is an array or Array-like.
 
   Ember Array Protocol:
@@ -314,6 +301,10 @@ Ember.wrap = function(func, superFunc) {
 
   Unlike Ember.typeOf this method returns true even if the passed object is
   not formally array but appears to be array-like (i.e. implements Ember.Array)
+
+      Ember.isArray(); // false
+      Ember.isArray([]); // true
+      Ember.isArray( Ember.ArrayProxy.create({ content: [] }) ); // true
 
   @param {Object} obj The object to test
   @returns {Boolean}
@@ -331,12 +322,19 @@ Ember.isArray = function(obj) {
   an array or array-like, returns the object.  Otherwise adds the object to
   an array.  If obj is null or undefined, returns an empty array.
 
+      Ember.makeArray();          => []
+      Ember.makeArray(null);      => []
+      Ember.makeArray(undefined); => []
+      Ember.makeArray('lindsay'); => ['lindsay'] 
+      Ember.makeArray([1,2,42]);  => [1,2,42]
+
+      var controller = Ember.ArrayProxy.create({ content: [] });
+      Ember.makeArray(controller) === controller;   => true
+
   @param {Object} obj the object
   @returns {Array}
 */
 Ember.makeArray = function(obj) {
-  if (obj === null || obj === undefined) return [];
+  if (obj === null || obj === undefined) { return []; }
   return Ember.isArray(obj) ? obj : [obj];
 };
-
-
