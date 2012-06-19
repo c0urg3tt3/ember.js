@@ -17,6 +17,15 @@ require('ember-handlebars/helpers/view');
       {{outlet masterView}}
       {{outlet detailView}}
 
+  You can also specify a particular containerView for stuff like id, tag, aria-role 
+
+      {{outlet masterView App.MyMasterContainerView}}
+      {{outlet detailView App.MyDetailContainerView}}
+      
+  for the basic outlet use 'view' for naming the outlet
+  
+      {{outlet view App.MyCustomContainerView}}
+
   Then, you can control several outlets from a single
   controller:
 
@@ -24,8 +33,8 @@ require('ember-handlebars/helpers/view');
       controller.set('detailView', postView);
 
   @name Handlebars.helpers.outlet
-  @param {String} property the property on the controller
-    that holds the view for this outlet
+  @param {String} property the property on the controller that holds the view for this outlet
+  @param {String} view the containerView defining the outlet view settings
 */
 Ember.Handlebars.registerHelper('outlet', function(property, view, options) {
   if (property && property.data && property.data.isRenderData) {
