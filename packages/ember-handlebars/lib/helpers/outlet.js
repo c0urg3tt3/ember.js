@@ -27,12 +27,18 @@ require('ember-handlebars/helpers/view');
   @param {String} property the property on the controller
     that holds the view for this outlet
 */
-Ember.Handlebars.registerHelper('outlet', function(property, options) {
+Ember.Handlebars.registerHelper('outlet', function(property, view, options) {
   if (property && property.data && property.data.isRenderData) {
     options = property;
     property = 'view';
+  } else if (view && view.data && view.data.isRenderData) {
+    options = view;
   }
 
+  if(typeof view !== "string") {
+    view = Ember.ContainerView;
+  }
+  
   options.hash.currentViewBinding = "controller." + property;
 
   return Ember.Handlebars.helpers.view.call(this, Ember.ContainerView, options);
